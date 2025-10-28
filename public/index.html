@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analisis UASA: Node.js & MongoDB</title>
+<style>
+    /* CSS untuk Penggayaan */
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f4f7f6;
+        color: #333;
+    }
+
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+        color: #007bff;
+        text-align: center;
+        margin-bottom: 25px;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 10px;
+    }
+    
+    .section {
+        background-color: #e9ecef;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .section h2 {
+        color: #555;
+        margin-top: 0;
+    }
+
+    input[type="file"], select {
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+
+    button {
+        background-color: #28a745;
+        color: white;
+        padding: 10px 18px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 15px;
+        margin-top: 10px;
+        transition: background-color 0.3s ease;
+    }
+    
+    #saveButton {
+        background-color: #ffc107;
+        color: #333;
+    }
+    #saveButton:hover {
+        background-color: #e0a800;
+    }
+    
+    #printButton {
+        background-color: #17a2b8;
+    }
+    #printButton:hover {
+        background-color: #138496;
+    }
+
+    /* Gaya Jadual Input Markah */
+    #markahInputSection {
+        display: none;
+    }
+
+    #markahInputTable td:nth-child(2) {
+    white-space: normal; /* Benarkan nama pelajar wrap */
+    word-wrap: break-word;
+    text-align: left !important;
+}
+
+    #markahInputTable th, #markahInputTable td {
+        border: 1px solid #dee2e6;
+        padding: 4px; /* Kurangkan padding */
+        text-align: center;
+        white-space: nowrap;
+        font-size: 0.8em; /* Saiz font yang lebih kecil untuk sel */
+    }
+
+    #markahInputTable th {
+        background-color: #007bff;
+        color: white;
+        font-size: 0.85em; /* Saiz font yang sedikit besar pada header */
+    }
+
+    #markahInputTable input[type="number"] {
+        /* PENTING: Kurangkan lebar kotak input */
+        width: 38px;
+        padding: 2px;
+        text-align: center;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        font-size: 0.8em;
+    }
+    
+    /* TETAPKAN LEBAR KOLUM UNTUK INPUT MARKAH: */
+    /* Berikan ruang yang munasabah untuk Nama Pelajar (20%) */
+    #markahInputTable th:nth-child(2) { width: 20%; max-width: 150px; } 
+    /* Berikan ruang yang lebih kecil untuk No. (5%) */
+    #markahInputTable th:nth-child(1) { width: 5%; }
+    /* Bahagikan baki ruang (75%) secara sama rata kepada 13 subjek */
+    #markahInputTable th:nth-child(n+3) { width: calc(75% / 13); } 
+
+    /* Pastikan div sekeliling boleh discroll jika saiz skrin terlalu kecil (mobile) */
+    #markahInputSection > div {
+        overflow-x: auto; 
+    }
+
+    
+    /* Gaya Jadual Keputusan Analisis (Output) */
+    #analisisKeputusan {
+        display: none;
+        margin-top: 30px;
+    }
+
+    .analisis-table td:nth-child(2) {
+    white-space: normal; /* Benarkan nama pelajar wrap */
+    word-wrap: break-word;
+    text-align: left !important;
+}
+
+    .analisis-table th, .analisis-table td {
+        border: 1px solid #dee2e6;
+        padding: 4px; /* Kurangkan padding */
+        text-align: center;
+        font-size: 0.8em; /* Kecilkan font */
+        white-space: nowrap;
+    }
+    
+    /* TETAPKAN LEBAR KOLUM UNTUK ANALISIS KEPUTUSAN: */
+    /* Nama Pelajar */
+    .analisis-table thead tr:nth-child(1) th:nth-child(2) { width: 15%; max-width: 150px; }
+    /* 13 Subjek */
+    .analisis-table thead tr:nth-child(2) th { width: calc(55% / 13); } 
+    /* Kolum Jumlah, Purata, Gred, Status */
+    .analisis-table thead tr:nth-child(1) th:nth-child(n+17) { width: 7.5%; }
+
+    /* Gaya Pelajar Terbaik */
+    #pelajarTerbaikSection {
+        margin-top: 25px;
+        border: 1px solid #ccc;
+        padding: 15px;
+        border-radius: 8px;
+        background-color: #fff;
+    }
+
+    #pelajarTerbaikTable {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        font-size: 0.9em;
+    }
+
+    #pelajarTerbaikTable th, #pelajarTerbaikTable td {
+        border: 1px solid #dee2e6;
+        padding: 8px;
+        text-align: left;
+    }
+
+    #pelajarTerbaikTable th {
+        background-color: #f8f9fa;
+    }
+
+    .lulus {
+        color: #28a745;
+        font-weight: bold;
+    }
+
+    .gagal {
+        color: #dc3545;
+        font-weight: bold;
+    }
+    
+    /* Gaya untuk cetakan */
+    @media print {
+        body { background-color: #fff; }
+        .container { box-shadow: none; border: none; }
+        
+        /* Sembunyikan semua kecuali analisis keputusan dan pelajar terbaik */
+        #uploadSection, #markahInputSection, #printButton {
+            display: none;
+        }
+        #analisisKeputusan {
+            display: block !important;
+            border: none;
+            padding: 0;
+        }
+        /* Kurangkan font lagi untuk cetakan */
+        .analisis-table th, .analisis-table td {
+            font-size: 0.65em; 
+            padding: 2px;
+        }
+    }
+
+    /* Gaya untuk Kelas Controls */
+    .kelas-controls {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    #kelasPilihan {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        min-width: 200px;
+    }
+
+    #padamKelasBtn {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background-color 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    #padamKelasBtn:hover:not(:disabled) {
+        background-color: #c82333;
+    }
+
+    #padamKelasBtn:disabled {
+        background-color: #6c757d;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .upload-form {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #ccc;
+    }
+</style>
+</head>
+<body onload="muatPilihanKelas()">
+    <div class="container">
+        <h1>Analisis Pencapaian Ujian Akhir Sesi Akademik (UASA)</h1>
+
+        <div id="uploadSection" class="section">
+            <h2>Langkah 1: Muat Naik atau Pilih Kelas</h2>
+            
+            <div class="kelas-controls">
+                <label for="kelasPilihan">Pilih Kelas Tersimpan (Dari MongoDB):</label>
+                <select id="kelasPilihan" onchange="pilihKelasTersimpan(this.value)">
+                    <option value="">-- Pilih Kelas --</option>
+                </select>
+                
+                <!-- Butang Padam Kelas -->
+                <button type="button" id="padamKelasBtn" onclick="padamKelas()" disabled>
+                    🗑️ Padam Kelas
+                </button>
+            </div>
+
+            <div class="upload-form">
+                <label for="titleInput">Masukkan Nama Kelas Baru (Cth: T4 Amanah):</label>
+                <input type="text" id="titleInput" placeholder="Nama Kelas" required style="width: 200px;">
+                
+                <label for="failData" style="font-weight: bold; display: block; margin-top: 10px;">Muat Naik Senarai Pelajar Baru (CSV):</label>
+                <input type="file" id="failData" accept=".csv" required>
+                <button type="button" onclick="muatnaikSenarai()">Muat Naik & Jana Borang Markah</button>
+                <p id="uploadMessage" style="color: red; margin-top: 10px;"></p>
+            </div>
+        </div>
+
+        <div id="markahInputSection">
+            <h2>Langkah 2: Masukkan Keputusan Ujian <span id="currentClassName" style="color: #007bff;"></span></h2>
+            <form id="markahForm">
+                <div style="overflow-x: auto;">
+                    <table id="markahInputTable">
+                        <thead>
+                            <tr>
+                                <th>No.</th>
+                                <th style="min-width: 150px;">Nama Pelajar</th>
+                                <th>BM</th><th>BI</th><th>MT</th><th>SN</th>
+                                <th>PAI</th><th>BA</th><th>PM</th><th>PJ</th>
+                                <th>PK</th><th>SEJ</th><th>MZ</th><th>PSV</th><th>RBT</th>
+                            </tr>
+                        </thead>
+                        <tbody id="markahTableBody">
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+                    <button type="button" id="saveButton" onclick="simpanMarkahTidakLengkap()">Simpan Data ke Server</button>
+                    <button type="submit">Langkah 3: Jana Analisis Pencapaian</button>
+                    <button type="button" id="printButton" onclick="window.print()" style="margin-left: 10px;">Cetak Keputusan</button>
+                </div>
+                <p id="saveMessage" style="color: green; margin-top: 10px;"></p>
+            </form>
+        </div>
+
+        <div id="analisisKeputusan">
+            <h2 id="analisisHeader">Keputusan Analisis Kelas</h2>
+            
+            <div id="pelajarTerbaikSection">
+                <h3>Ringkasan Pelajar Terbaik Mengikut Mata Pelajaran</h3>
+                <div id="ringkasanPelajarTerbaik"></div>
+            </div>
+
+            <div id="keputusanJadual" style="margin-top: 25px;"></div>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://localhost:3000/api';
+        const SUBJEK = ['bm', 'bi', 'mt', 'sn', 'pai', 'ba', 'pm', 'pj', 'pk', 'sej', 'mz', 'psv', 'rbt'];
+        const NAMA_SUBJEK = {
+            'bm': 'Bahasa Melayu', 'bi': 'Bahasa Inggeris', 'mt': 'Matematik', 'sn': 'Sains',
+            'pai': 'Pendidikan Islam', 'ba': 'B. Arab', 'pm': 'P. Moral', 'pj': 'P. Jasmani',
+            'pk': 'P. Kesihatan', 'sej': 'Sejarah', 'mz': 'Muzik', 'psv': 'PSV', 'rbt': 'RBT'
+        };
+        let currentClassKey = ''; 
+        let dataPelajarSemasa = [];
+
+        // --- FUNGSI PEMBANTU ANALISIS ---
+
+        function tentukanGredDanStatus(purata, markahSubjek) {
+            let gred;
+            if (purata >= 80) gred = 'A';
+            else if (purata >= 60) gred = 'B';
+            else if (purata >= 40) gred = 'C';
+            else if (purata >= 20) gred = 'D';
+            else gred = 'E';
+
+            let status = 'LULUS';
+            let statusClass = 'lulus';
+            
+            const terasFail = markahSubjek.bm < 30 || markahSubjek.bi < 30 || markahSubjek.mt < 30 || markahSubjek.sn < 30;
+
+            if (purata < 40 || terasFail) {
+                status = 'GAGAL';
+                statusClass = 'gagal';
+            }
+            return { gred, status, statusClass };
+        }
+        
+        // --- FUNGSI INTERAKSI API ---
+
+        async function muatPilihanKelas() {
+            try {
+                const response = await fetch(`${BASE_URL}/kelas`);
+                
+                // --- PENTING: PEMBETULAN UNTUK KENDALIKAN RALAT STATUS 500/NON-JSON ---
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('API Error Response:', errorText);
+                    document.getElementById('uploadMessage').textContent = `❌ Ralat server semasa memuatkan kelas: ${errorText}`;
+                    return; 
+                }
+                // ----------------------------------------------------------------------
+                
+                const kelasList = await response.json();
+                
+                const selectElement = document.getElementById('kelasPilihan');
+                selectElement.innerHTML = '<option value="">-- Pilih Kelas --</option>';
+
+                kelasList.forEach(kelas => {
+                    const option = document.createElement('option');
+                    option.value = kelas.namaKelas;
+                    option.textContent = kelas.namaKelas;
+                    selectElement.appendChild(option);
+                });
+
+                document.getElementById('uploadMessage').textContent = ''; 
+                togglePadamButton(); // Update status butang padam
+
+            } catch (error) {
+                console.error('Ralat menyambung ke server Node.js:', error);
+                document.getElementById('uploadMessage').textContent = '⚠️ Ralat menyambung ke server Node.js. Sila pastikan "node server.js" sedang berjalan.';
+            }
+        }
+
+        // Fungsi untuk mengaktifkan/menyahaktif butang padam berdasarkan pilihan dropdown
+        function togglePadamButton() {
+            const padamBtn = document.getElementById('padamKelasBtn');
+            const kelasDropdown = document.getElementById('kelasPilihan');
+            
+            padamBtn.disabled = !kelasDropdown.value;
+        }
+        
+        async function pilihKelasTersimpan(key) {
+            if (!key) {
+                document.getElementById('markahInputSection').style.display = 'none';
+                document.getElementById('analisisKeputusan').style.display = 'none';
+                currentClassKey = '';
+                togglePadamButton(); // Update status butang padam
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${BASE_URL}/kelas/${key}`);
+                const dataKelas = await response.json();
+
+                currentClassKey = key;
+                dataPelajarSemasa = dataKelas.pelajar; 
+                
+                document.getElementById('currentClassName').textContent = `: ${key}`;
+                janaBorangMarkah(dataPelajarSemasa);
+                document.getElementById('titleInput').value = key;
+                document.getElementById('markahInputSection').style.display = 'block';
+                document.getElementById('analisisKeputusan').style.display = 'none';
+                document.getElementById('saveMessage').textContent = '';
+                togglePadamButton(); // Update status butang padam
+            } catch (error) {
+                console.error('Ralat memuatkan data kelas:', error);
+                alert('Ralat memuatkan data kelas: ' + error.message);
+            }
+        }
+
+        // Fungsi untuk memadam kelas
+        async function padamKelas() {
+            const kelasDropdown = document.getElementById('kelasPilihan');
+            const selectedKelas = kelasDropdown.value;
+
+            if (!selectedKelas) {
+                alert('Sila pilih kelas terlebih dahulu!');
+                return;
+            }
+
+            // Konfirmasi sebelum padam
+            const confirmed = confirm(`Adakah anda pasti ingin memadam kelas "${selectedKelas}"? Tindakan ini tidak boleh dibatalkan.`);
+            
+            if (!confirmed) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${BASE_URL}/kelas/${encodeURIComponent(selectedKelas)}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    alert(result.message);
+                    
+                    // Refresh dropdown kelas
+                    await muatPilihanKelas();
+                    
+                    // Clear table jika ada
+                    clearMarkahTable();
+                    
+                    // Reset form
+                    document.getElementById('markahInputSection').style.display = 'none';
+                    document.getElementById('analisisKeputusan').style.display = 'none';
+                    document.getElementById('titleInput').value = '';
+                    
+                } else {
+                    const errorText = await response.text();
+                    alert('Ralat memadam kelas: ' + errorText);
+                }
+            } catch (error) {
+                console.error('Ralat:', error);
+                alert('Ralat memadam kelas: ' + error.message);
+            }
+        }
+
+        // Fungsi untuk clear table
+        function clearMarkahTable() {
+            const table = document.getElementById('markahInputTable');
+            if (table) {
+                const tbody = table.querySelector('tbody');
+                if (tbody) {
+                    tbody.innerHTML = '';
+                }
+            }
+        }
+
+        async function simpanMarkahTidakLengkap() {
+            if (!currentClassKey) {
+                alert("Sila muat naik atau pilih kelas terlebih dahulu untuk menyimpan data.");
+                return;
+            }
+            
+            kumpulMarkahDariInput();
+            
+            try {
+                const response = await fetch(`${BASE_URL}/kelas/simpan`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ namaKelas: currentClassKey, pelajar: dataPelajarSemasa })
+                });
+                
+                if (response.ok) {
+                    document.getElementById('saveMessage').textContent = '✅ Data markah berjaya disimpan ke server!';
+                    document.getElementById('saveMessage').style.color = 'green';
+                } else {
+                    const errorText = await response.text();
+                    document.getElementById('saveMessage').textContent = `❌ Gagal menyimpan data: ${errorText}`;
+                    document.getElementById('saveMessage').style.color = 'red';
+                }
+            } catch (error) {
+                document.getElementById('saveMessage').textContent = '❌ Ralat sambungan server semasa menyimpan.';
+                document.getElementById('saveMessage').style.color = 'red';
+            }
+        }
+
+        async function muatnaikSenarai() {
+            const namaKelas = document.getElementById('titleInput').value.trim();
+            const inputFail = document.getElementById('failData');
+            const fail = inputFail.files[0];
+
+            if (!namaKelas || !fail) {
+                document.getElementById('uploadMessage').textContent = "⚠️ Sila masukkan Nama Kelas dan pilih fail CSV.";
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('csvFile', fail);
+            formData.append('namaKelas', namaKelas);
+            document.getElementById('uploadMessage').textContent = 'Memuat naik...';
+
+            try {
+                const response = await fetch(`${BASE_URL}/kelas/upload`, {
+                    method: 'POST',
+                    body: formData 
+                });
+                
+                const responseData = await response.json().catch(() => response.text());
+
+                if (response.ok) {
+                    alert(`Senarai pelajar untuk kelas ${namaKelas} berjaya dimuat naik dan disimpan!`);
+                    
+                    currentClassKey = namaKelas;
+                    dataPelajarSemasa = responseData.kelasData.pelajar;
+                    
+                    document.getElementById('currentClassName').textContent = `: ${namaKelas}`;
+                    janaBorangMarkah(dataPelajarSemasa);
+                    document.getElementById('markahInputSection').style.display = 'block';
+                    document.getElementById('analisisKeputusan').style.display = 'none';
+                    document.getElementById('uploadMessage').textContent = '✅ Muat naik berjaya!';
+
+                    muatPilihanKelas(); 
+                    document.getElementById('kelasPilihan').value = currentClassKey;
+                    togglePadamButton(); // Update status butang padam
+
+                } else {
+                    document.getElementById('uploadMessage').textContent = `❌ Ralat: ${responseData.message || responseData}`;
+                }
+
+            } catch (error) {
+                document.getElementById('uploadMessage').textContent = '❌ Ralat sambungan server semasa muat naik.';
+                console.error(error);
+            }
+        }
+
+        // --- FUNGSI BORANG DAN ANALISIS (Tidak Berubah) ---
+        
+        function janaBorangMarkah(pelajarData) {
+            const tbody = document.getElementById('markahTableBody');
+            tbody.innerHTML = ''; 
+
+            pelajarData.forEach((pelajar, index) => {
+                const newRow = tbody.insertRow();
+                let markahInputsHTML = '';
+                
+                SUBJEK.forEach(subjek => {
+                    const nilaiSemasa = pelajar.markah && pelajar.markah[subjek] !== undefined ? pelajar.markah[subjek] : '';
+                    markahInputsHTML += `
+                        <td><input type="number" 
+                                   data-index="${index}" 
+                                   data-subjek="${subjek}" 
+                                   value="${nilaiSemasa}"
+                                   min="0" max="100">
+                        </td>
+                    `;
+                });
+                
+                newRow.innerHTML = `
+                    <td>${index + 1}.</td>
+                    <td style="text-align: left;">${pelajar.nama}</td>
+                    ${markahInputsHTML}
+                `;
+            });
+        }
+        
+        function kumpulMarkahDariInput() {
+            const markahInputs = document.querySelectorAll('#markahInputTable input[type="number"]');
+            
+            markahInputs.forEach(input => {
+                const index = parseInt(input.getAttribute('data-index'));
+                const subjek = input.getAttribute('data-subjek');
+                
+                const nilai = input.value === "" ? undefined : parseInt(input.value);
+                
+                if (!dataPelajarSemasa[index].markah) {
+                    dataPelajarSemasa[index].markah = {};
+                }
+                dataPelajarSemasa[index].markah[subjek] = nilai;
+            });
+        }
+
+        document.getElementById('markahForm').addEventListener('submit', function(e) {
+            e.preventDefault(); 
+            
+            kumpulMarkahDariInput(); 
+            simpanMarkahTidakLengkap(); 
+
+            let pelajarTerbaik = {}; 
+            let hasilAnalisisHTML = `
+                <table class="analisis-table">
+                    <thead>
+                        <tr>
+                            <th rowspan="2">No.</th>
+                            <th rowspan="2" style="min-width: 150px;">Nama Pelajar</th>
+                            <th colspan="4">Teras</th>
+                            <th colspan="${SUBJEK.length - 4}">Elektif/Lain-lain</th>
+                            <th rowspan="2">Jumlah</th>
+                            <th rowspan="2">Purata</th>
+                            <th rowspan="2">Gred</th>
+                            <th rowspan="2">Status</th>
+                        </tr>
+                        <tr>
+                            <th>BM</th><th>BI</th><th>MT</th><th>SN</th>
+                            <th>PAI</th><th>BA</th><th>PM</th><th>PJ</th>
+                            <th>PK</th><th>SEJ</th><th>MZ</th><th>PSV</th><th>RBT</th>
+                        </tr>
+                    </thead>
+                <tbody>`;
+            
+            SUBJEK.forEach(s => { pelajarTerbaik[s] = { nama: '-', markah: -1 }; });
+            
+            dataPelajarSemasa.forEach((pelajar, index) => {
+                let jumlahSubjekDiisi = 0;
+                let jumlahMarkah = 0;
+                
+                SUBJEK.forEach(s => {
+                    const markah = pelajar.markah[s];
+                    if (markah !== undefined) {
+                        jumlahMarkah += markah;
+                        jumlahSubjekDiisi++;
+
+                        if (markah > pelajarTerbaik[s].markah) {
+                            pelajarTerbaik[s] = { nama: pelajar.nama, markah: markah };
+                        } else if (markah === pelajarTerbaik[s].markah && markah !== -1) {
+                            if (!pelajarTerbaik[s].nama.includes(pelajar.nama)) {
+                                pelajarTerbaik[s].nama += `, ${pelajar.nama}`;
+                            }
+                        }
+                    }
+                });
+
+                const purata = jumlahSubjekDiisi > 0 ? jumlahMarkah / jumlahSubjekDiisi : 0;
+                const statusObj = tentukanGredDanStatus(purata, pelajar.markah); 
+                
+                hasilAnalisisHTML += `<tr>
+                    <td>${index + 1}.</td>
+                    <td style="text-align: left;">${pelajar.nama}</td>
+                    
+                    <td>${pelajar.markah.bm !== undefined ? pelajar.markah.bm : '-'}</td>
+                    <td>${pelajar.markah.bi !== undefined ? pelajar.markah.bi : '-'}</td>
+                    <td>${pelajar.markah.mt !== undefined ? pelajar.markah.mt : '-'}</td>
+                    <td>${pelajar.markah.sn !== undefined ? pelajar.markah.sn : '-'}</td>
+                    
+                    <td>${pelajar.markah.pai !== undefined ? pelajar.markah.pai : '-'}</td>
+                    <td>${pelajar.markah.ba !== undefined ? pelajar.markah.ba : '-'}</td>
+                    <td>${pelajar.markah.pm !== undefined ? pelajar.markah.pm : '-'}</td>
+                    <td>${pelajar.markah.pj !== undefined ? pelajar.markah.pj : '-'}</td>
+                    <td>${pelajar.markah.pk !== undefined ? pelajar.markah.pk : '-'}</td>
+                    <td>${pelajar.markah.sej !== undefined ? pelajar.markah.sej : '-'}</td>
+                    <td>${pelajar.markah.mz !== undefined ? pelajar.markah.mz : '-'}</td>
+                    <td>${pelajar.markah.psv !== undefined ? pelajar.markah.psv : '-'}</td>
+                    <td>${pelajar.markah.rbt !== undefined ? pelajar.markah.rbt : '-'}</td>
+
+                    <td style="font-weight: bold;">${jumlahMarkah}</td>
+                    <td>${purata.toFixed(2)}</td>
+                    <td style="font-weight: bold;">${statusObj.gred}</td>
+                    <td class="${statusObj.statusClass}">${statusObj.status}</td>
+                </tr>`;
+            });
+
+            hasilAnalisisHTML += "</tbody></table>";
+
+            // Jana Jadual Pelajar Terbaik
+            let terbaikHTML = `<table id="pelajarTerbaikTable">
+                <thead>
+                    <tr><th>Mata Pelajaran</th><th>Nama Pelajar</th><th>Markah</th></tr>
+                </thead>
+                <tbody>`;
+
+            SUBJEK.forEach(s => {
+                const dataTerbaik = pelajarTerbaik[s];
+                if (dataTerbaik.markah !== -1) {
+                     terbaikHTML += `<tr>
+                        <td>${NAMA_SUBJEK[s]}</td>
+                        <td>${dataTerbaik.nama}</td>
+                        <td style="text-align: right; font-weight: bold;">${dataTerbaik.markah}</td>
+                    </tr>`;
+                }
+            });
+
+            terbaikHTML += "</tbody></table>";
+            
+            
+            document.getElementById('analisisHeader').textContent = `Keputusan Analisis Kelas ${currentClassKey}`;
+            document.getElementById('ringkasanPelajarTerbaik').innerHTML = terbaikHTML;
+            document.getElementById('keputusanJadual').innerHTML = hasilAnalisisHTML;
+            document.getElementById('analisisKeputusan').style.display = 'block';
+        });
+
+        // Add event listener untuk dropdown change
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('kelasPilihan').addEventListener('change', togglePadamButton);
+        });
+    </script>
+</body>
+</html>
